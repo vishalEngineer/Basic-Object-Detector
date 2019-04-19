@@ -1,0 +1,123 @@
+import cv2
+import numpy as np
+
+#this function compares the image with the given template and returns
+#the no.of SIFT matches
+def sift_detector(new_image,image_template):
+    img1=cv2.cvtColor(new_image,cv2.COLOR_BGR2GRAY)
+    img2=image_template
+    
+    #create object for SIFT
+    sift=cv2.SIFT()
+    
+    #NOW obtain KEYPOINTS and descriptors(vectors that shore key points)
+    keypoints_1,descriptors_1=sift.detectAndCompute(img1,None)
+    keypoints_2,descriptors_2=sift.detectAndCompute(img2,None)
+    
+    #parameters for FLANN matcher(fast but not accurate matcher)
+    FLANN_INDEX_KDTREE=0
+    index_params=dict(algorithm=FLANN_INDEX_KDTREE,trees=3)
+    search_params=dict(checks=100)
+    
+    
+    #creating object for flann matcher
+    flann=cv2.FlannBasedMatcher(index_params,search_params)
+    
+    #getting matches using KNN(K-nearest neighbour)method
+    matches=flann.knnMatch(descriptors_1,descriptors_2,k=2)
+    
+    #storing good matches by LOWE'S RATIO TEST
+    good_matches=[]
+    for m,n in matches:
+        if m.distance<0.7*n.distance:
+            good_matches.append(m)
+    return len(good_matches)        
+cap=cv2.VideoCapture(0)
+
+
+#load our image template 
+image_template=cv2.imread('abraham.jpg',0)
+
+while True:
+    
+    #get the images through webcam
+    ret,frame=cap.read()
+    
+    #get height & width of webcam frame
+    height,width=frame.shape[:2]
+    
+    #define ROI box
+    top_left_x=width/3
+    top_left_y=(height/2)+(height/4)
+    bottom_right_x=(width/3)*2
+    bottom_right_y=(height/2)-(height/4)
+    
+    
+    #drawing rectangular window of our intrest
+    cv2.rectangle(frame,(top_left_x,top_left_y),(bottom_right_x,bottom_right_y),255,3)
+    
+    #cropped window
+    cropped=frame[bottom_right_y:top_left_y,top_left_x:bottom_right_x]
+    
+    #flip frame orientation
+    frame=cv2.flip(frame,1)
+    
+    #get number of sift matches
+    matches=sift_detector(cropped,image_template)
+    
+    #display status as current no.of matches
+    cv2.putText(frame,str(matches),(450,450),cv2.FONT_HERSHEY_COMPLEX,2,(0,255,0),1)
+    
+    #threshold is to indiate object detection
+    threshold=10
+    
+    #if matches exceed our threshold then object has been detected
+    if matches>threshold:
+        cv2.rectangle(frame,(top_left_x,top_left_y),(bottom_right_x,bottom_right_y),(0,255,255),3)
+        cv2.putText(frame,'object found',(50,50),cv2.FONT_HERSHEY_COMPLEX,2,(0,255,255),2)
+        
+    cv2.imshow('object detector using SIFT',frame)
+    if cv2.waitKey(1)==13:
+        break
+cap.release()
+cv2.destroyAllWindows()    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
